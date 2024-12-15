@@ -2,6 +2,7 @@ const express=require('express')
 const cors =require('cors')
 const dotenv = require('dotenv');
 const model_router=require('./routes/model_route')
+const bodyParser=require('body-parser')
 // I could use this later.....
 // const corsOptions = {
 //     origin: 'http://localhost:3000',  
