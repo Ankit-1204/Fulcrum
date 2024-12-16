@@ -12,6 +12,7 @@ const authenticate=(req,res)=>{
             if(err){
                 res.status(401).send({'message':'Please Login or SignUp'})
             }else{
+                console.log(decoded);
                 req.user=decoded;
                 next();
             }

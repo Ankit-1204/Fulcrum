@@ -2,11 +2,12 @@ const express=require('express')
 const multer =require('multer');
 const path = require('path');
 const axios=require('axios')
+const authenticate =require('../middleware/auth');
 
 
 const router=express.Router()
 const uploads=multer({dest:'upload/'});
-router.get('/download/model/:name',(req,res)=>{
+router.get('/download/model/:name',authenticate,(req,res)=>{
     const {name}=req.params;
     const filepath= path.join(__dirname+'name')
 
@@ -15,7 +16,7 @@ router.get('/download/model/:name',(req,res)=>{
         res.status(404).json({ error: 'Model not found' });
     })
 })
-router.post('/upload',uploads.single('file'),(req,res)=>{
+router.post('/upload',authenticate,uploads.single('file'),(req,res)=>{
     try {
         res.status(200).json({message:'File Uploaded Successfully',file:req.file})
     } catch (error) {
@@ -23,7 +24,7 @@ router.post('/upload',uploads.single('file'),(req,res)=>{
     }
 })
 
-router.post('/predict',(req,res)=>{
+router.post('/predict',authenticate,(req,res)=>{
     const {model_name,inputs}= req.body()
     try {
         const data = {

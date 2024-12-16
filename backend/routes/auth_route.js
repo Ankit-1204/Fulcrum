@@ -10,6 +10,7 @@ const router=express.Router()
 
 router.post('/auth/signup', async (req,res)=>{
     try{
+        console.log(req.body);
         const {username,password} =req.body;
         const salt= await  bcrypt.genSalt(10);
         const hash= await bcrypt.hash(password,salt);
@@ -43,7 +44,10 @@ router.post('/auth/login',async (req,res)=>{
             res.status(200).send({'token':token});
         }
     } catch (error) {
-        
+        console.log('login token error',error);
+        res.status(404).send({'message':error});
     }
 })
+
+module.exports=router
 
