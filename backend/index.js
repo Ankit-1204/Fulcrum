@@ -1,6 +1,6 @@
 const express=require('express')
 const cors =require('cors')
-const dotenv = require('dotenv');
+const dotenv = require('dotenv').config();
 const model_router=require('./routes/model_route')
 const auth_router=require('./routes/auth_route');
 const bodyParser=require('body-parser')
@@ -12,7 +12,6 @@ const mongoose = require('mongoose')
 //     allowedHeaders: ['Content-Type'],
 //   };
 
-dotenv.config()
 const db_key= process.env.DB_KEY;
 async function connect(){
   await mongoose.connect(db_key);

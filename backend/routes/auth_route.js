@@ -5,12 +5,10 @@ const jwt=require('jsonwebtoken')
 const User=require('../model/auth_model')
 
 const key=process.env.JWT_KEY;
-
 const router=express.Router()
 
 router.post('/auth/signup', async (req,res)=>{
     try{
-        console.log(req.body);
         const {username,password} =req.body;
         const salt= await  bcrypt.genSalt(10);
         const hash= await bcrypt.hash(password,salt);
@@ -32,12 +30,14 @@ router.post('/auth/signup', async (req,res)=>{
 router.post('/auth/login',async (req,res)=>{
     try {
         const {username,password}=req.body;
-        const user =User.findOne({username});
+        let user =await User.findOne({username:username});
         if(!user){
+            console.log(user);
             res.status(404).send({'message':'Username not found'})
         }
         const isMatch = await bcrypt.compare(password,user.password);
         if(!isMatch){
+            console.log(isMatch);
             res.status(404).send({'message':'Incorrect Password'});
         }else{
             const token= jwt.sign({data:username},key,{expiresIn:'2hr'});
