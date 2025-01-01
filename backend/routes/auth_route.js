@@ -41,7 +41,7 @@ router.post('/auth/login',async (req,res)=>{
             res.status(404).send({'message':'Incorrect Password'});
         }else{
             const token= jwt.sign({data:username},key,{expiresIn:'2hr'});
-            res.status(200).send({'token':token});
+            res.status(200).send({'token':token,'user':username});
         }
     } catch (error) {
         console.log('login token error',error);

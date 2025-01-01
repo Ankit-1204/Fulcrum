@@ -8,9 +8,10 @@ app =Flask(__name__)
 def predict():
     data=request.json
     model_name=data['model_name']
+    user_name=data['user']
     input=data['input']
     try:
-        model_path=f'upload/{model_name}'
+        model_path=f'upload/{user_name}/{model_name}'
         model=joblib.load(model_path)
         prediction=model.predict(model)
 
