@@ -39,13 +39,24 @@ router.post('/download/model/:name',authenticate,(req,res)=>{
         }
     })
 })
-router.post('/upload',authenticate,uploads.single('file'),(req,res)=>{
+router.post('/upload',authenticate,upload.fields([
+    { name: 'model', maxCount: 1 },
+    { name: 'script', maxCount: 1 },
+    { name: 'requirements', maxCount: 1 }
+]),(req,res)=>{
     try {
-        console.log(req.body)
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
         res.status(200).json({message:'File Uploaded Successfully',file:req.file})
+        const record = {
+            userId: req.body.userId,
+            model: req.files['model'][0].path,
+            script: req.files['script'][0].path,
+            requirements: req.files['requirements'][0].path,
+            status: 'uploaded',  // Initial status
+        };
+        
     } catch (error) {
         res.status(404).send(error)
     }
