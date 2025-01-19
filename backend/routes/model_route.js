@@ -4,10 +4,28 @@ const fs = require('fs');
 const path = require('path');
 const axios=require('axios')
 const authenticate =require('../middleware/auth');
-
+const Model=require('../model/file_model')
+const { exec } = require('child_process');
+const path = require('path');
 
 const router=express.Router()
 
+async function envSetup(recordId) {
+    const record=Model.findOne({_id:recordId})
+    const venvPath = path.join(__dirname, 'venvs', recordId.toString());
+    exec(`python3 -m venv ${venvPath}`, (err) => {
+        if (err) return console.error('Error creating virtual environment:', err);
+        const pipInstall = `${path.join(venvPath, 'bin', 'pip')} install -r ${record.requirements}`;
+        exec(pipInstall, (err) => {
+            if (err) return console.error('Error installing requirements:', err);
+            Model.updateOne(
+                { _id: recordId },
+                { $set: { status: 'ready', venvPath } }
+            );
+            console.log('Environment setup complete');
+        });
+    })
+} 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const dir = path.join('upload',req.body.user); 
@@ -43,7 +61,7 @@ router.post('/upload',authenticate,upload.fields([
     { name: 'model', maxCount: 1 },
     { name: 'script', maxCount: 1 },
     { name: 'requirements', maxCount: 1 }
-]),(req,res)=>{
+]),async(req,res)=>{
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -54,9 +72,10 @@ router.post('/upload',authenticate,upload.fields([
             model: req.files['model'][0].path,
             script: req.files['script'][0].path,
             requirements: req.files['requirements'][0].path,
-            status: 'uploaded',  // Initial status
+            status: 'uploaded'
         };
-        
+        const new_rec= await Model.create(record)
+
     } catch (error) {
         res.status(404).send(error)
     }

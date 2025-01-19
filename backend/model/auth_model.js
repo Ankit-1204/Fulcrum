@@ -6,12 +6,6 @@ const UserSchema =mongoose.Schema({
 })
 UserModel=mongoose.model('User',UserSchema);
 
-const ModelSchema=mongoose.Schema({
-    userId:{type: mongoose.Schema.Types.ObjectId, unique: true, ref:'User' },
-    model : {type: "String", required: true},
-    requirement : {type: "String", required: true},
-    script : {type: "String", required: true},
-})
 
 
 module.exports=UserModel
