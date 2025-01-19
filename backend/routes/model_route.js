@@ -6,7 +6,6 @@ const axios=require('axios')
 const authenticate =require('../middleware/auth');
 const Model=require('../model/file_model')
 const { exec } = require('child_process');
-const path = require('path');
 
 const router=express.Router()
 
@@ -57,7 +56,7 @@ router.post('/download/model/:name',authenticate,(req,res)=>{
         }
     })
 })
-router.post('/upload',authenticate,upload.fields([
+router.post('/upload',authenticate,uploads.fields([
     { name: 'model', maxCount: 1 },
     { name: 'script', maxCount: 1 },
     { name: 'requirements', maxCount: 1 }
@@ -75,6 +74,8 @@ router.post('/upload',authenticate,upload.fields([
             status: 'uploaded'
         };
         const new_rec= await Model.create(record)
+        envSetup(new_rec._id)
+        res.status(200).send({'message':'File Uploaded and Environment created'})
 
     } catch (error) {
         res.status(404).send(error)
