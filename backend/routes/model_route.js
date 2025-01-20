@@ -10,14 +10,17 @@ const { exec } = require('child_process');
 const router=express.Router()
 
 async function envSetup(recordId) {
-    const record=Model.findOne({_id:recordId})
-    const venvPath = path.join(__dirname, 'venvs', recordId.toString());
+    const record=await Model.findOne({_id:recordId})
+    const venvPath = path.join( 'venvs', recordId.toString());
+    const req_path = path.resolve(record.requirement);
+    console.log(req_path)
+    console.log('yooo')
     exec(`python -m venv ${venvPath}`, (err) => {
         if (err) return console.error('Error creating virtual environment:', err);
-        const pipInstall = `${path.join(venvPath, 'bin', 'pip')} install -r ${record.requirements}`;
-        exec(pipInstall, (err) => {
+        const pipInstall = `${path.join(venvPath, 'Scripts', 'pip')} install -r ${req_path}`;
+        exec(pipInstall, async (err) => {
             if (err) return console.error('Error installing requirements:', err);
-            Model.updateOne(
+            await Model.updateOne(
                 { _id: recordId },
                 { $set: { status: 'ready', venvPath } }
             );
@@ -66,6 +69,7 @@ router.post('/upload',authenticate,uploads.fields([
             console.log('No file uploaded')
             return res.status(400).json({ error: 'No file uploaded' });
         }
+        console.log(req.files['requirements'][0].path)
         const record = {
             userId: req.body.userId,
             model: req.files['model'][0].path,
@@ -76,6 +80,7 @@ router.post('/upload',authenticate,uploads.fields([
         console.log('record created')
         const new_rec= await Model.create(record)
         console.log('model update before env')
+        console.log(new_rec._id)
         await envSetup(new_rec._id)
         res.status(200).send({'message':'File Uploaded and Environment created'})
 
