@@ -6,9 +6,25 @@ const axios=require('axios')
 const authenticate =require('../middleware/auth');
 const Model=require('../model/file_model')
 const { exec } = require('child_process');
+const { model } = require('mongoose');
 
 const router=express.Router()
 
+async function runInference(model_name,input){
+    const record= await Model.findOne({'model':model})
+    const envPath=path.resolve(record.venvPath,'Scripts','python')
+    const scriptPath = record.script;
+    return new Promise((resolve, reject) => {
+        const scriptPath = record.script;
+        const process = exec('${envPath} ${scriptPath}',
+            {input:JSON.stringify(inputs)},
+            (err, stdout, stderr) => {
+                if (err) return reject(`Error: ${stderr}`);
+                resolve(stdout);
+            }
+        )
+    })
+}
 async function envSetup(recordId) {
     const record=await Model.findOne({_id:recordId})
     const venvPath = path.join( 'venvs', recordId.toString());
@@ -89,18 +105,14 @@ router.post('/upload',authenticate,uploads.fields([
     }
 })
 
-router.post('/predict',authenticate,(req,res)=>{
+router.post('/predict',authenticate, async (req,res)=>{
     const {model_name,inputs,user}= req.body()
     try {
-        const data = {
-            'model_name':model_name,
-            'inputs':inputs,
-            'user':user
-        }
-        const response=axios.post('http://localhost:5000/predict',data);
-        res.json({'output':response});
+        
+        const response=await runInference(model_name,inputs);
+        res.status(200).send({ response });
     } catch (error) {
-        console.log(`error is ${error}`);
+        res.status(500).send({ error: error.message });
     }
 })
 
