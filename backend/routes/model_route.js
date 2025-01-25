@@ -5,13 +5,14 @@ const path = require('path');
 const axios=require('axios')
 const authenticate =require('../middleware/auth');
 const Model=require('../model/file_model')
-const { exec } = require('child_process');
+const { execFile  } = require('child_process');
 const { model } = require('mongoose');
 
 const router=express.Router()
 
 async function runInference(model_name,data,data_type){
     const record= await Model.findOne({'model':model_name})
+    console.log(record)
     const envPath=path.resolve(record.venvPath,'Scripts','python')
     const scriptPath = record.script;
     execFile(envPath, [scriptPath, JSON.stringify(data)], (err, stdout, stderr) => {
@@ -87,9 +88,10 @@ router.post('/upload',authenticate,uploads.fields([
             return res.status(400).json({ error: 'No file uploaded' });
         }
         console.log(req.files['requirements'][0].path)
+        const fileName = req.files['model'][0].path.split('\\').pop();
         const record = {
             userId: req.body.userId,
-            model: req.files['model'][0].path,
+            model: fileName,
             script: req.files['script'][0].path,
             requirement: req.files['requirements'][0].path,
             status: 'uploaded'
@@ -108,14 +110,29 @@ router.post('/upload',authenticate,uploads.fields([
 
 router.post('/predict',authenticate, async (req,res)=>{
     try {
-        const {model_name,data_type,data}= req.body()
-        if(!model_name || !inputs){
+        console.log(req.body);
+        const {model_name,data_type,data}= req.body
+        if(!model_name || !data){
             return res.status(400).json({
                 error:'Model name or data or data type not provided'
             })
         }
-        const response=await runInference(model_name,data,data_type);
-        res.status(200).send({ response });
+        const record= await Model.findOne({'model':model_name})
+        console.log(record)
+        const envPath=path.resolve(record.venvPath,'Scripts','python')
+        const scriptPath = record.script;
+        execFile(envPath, [scriptPath, JSON.stringify(data)], (err, stdout, stderr) => {
+            if (err) {
+                console.error('Error executing Python script:', err);
+                return res.status(500).json({ error: 'Failed to process request' });
+            }
+            if (stderr) {
+                console.error('stderr:', stderr);
+                return res.status(500).json({ error: 'Python script error' });
+            }
+            res.json({ result: stdout });
+        })
+       
     } catch (error) {
         res.status(500).send({ error: error.message });
     }

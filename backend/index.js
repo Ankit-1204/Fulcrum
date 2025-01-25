@@ -19,6 +19,7 @@ async function connect(){
 connect().catch((err)=>{console.log(err)});
 const app=express()
 app.use(cors())
+app.use(express.json());
 app.use(bodyParser.json())
 app.use(model_router)
 app.use(auth_router);
