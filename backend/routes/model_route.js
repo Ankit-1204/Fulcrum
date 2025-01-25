@@ -10,19 +10,20 @@ const { model } = require('mongoose');
 
 const router=express.Router()
 
-async function runInference(model_name,input){
-    const record= await Model.findOne({'model':model})
+async function runInference(model_name,data,data_type){
+    const record= await Model.findOne({'model':model_name})
     const envPath=path.resolve(record.venvPath,'Scripts','python')
     const scriptPath = record.script;
-    return new Promise((resolve, reject) => {
-        const scriptPath = record.script;
-        const process = exec('${envPath} ${scriptPath}',
-            {input:JSON.stringify(inputs)},
-            (err, stdout, stderr) => {
-                if (err) return reject(`Error: ${stderr}`);
-                resolve(stdout);
-            }
-        )
+    execFile(envPath, [scriptPath, JSON.stringify(data)], (err, stdout, stderr) => {
+        if (err) {
+            console.error('Error executing Python script:', err);
+            return res.status(500).json({ error: 'Failed to process request' });
+        }
+        if (stderr) {
+            console.error('stderr:', stderr);
+            return res.status(500).json({ error: 'Python script error' });
+        }
+        res.json({ result: stdout });
     })
 }
 async function envSetup(recordId) {
@@ -106,10 +107,14 @@ router.post('/upload',authenticate,uploads.fields([
 })
 
 router.post('/predict',authenticate, async (req,res)=>{
-    const {model_name,inputs,user}= req.body()
     try {
-        
-        const response=await runInference(model_name,inputs);
+        const {model_name,data_type,data}= req.body()
+        if(!model_name || !inputs){
+            return res.status(400).json({
+                error:'Model name or data or data type not provided'
+            })
+        }
+        const response=await runInference(model_name,data,data_type);
         res.status(200).send({ response });
     } catch (error) {
         res.status(500).send({ error: error.message });

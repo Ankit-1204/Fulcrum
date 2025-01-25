@@ -7,7 +7,7 @@ const ModelSchema=mongoose.Schema({
     script : {type: "String", required: true},
     status: {type: "String", required: true},
     venvPath: {type: "String"}
-})
+}) 
 
 const Model=mongoose.model('Model',ModelSchema)
 

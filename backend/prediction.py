@@ -1,23 +1,28 @@
-from flask import Flask, request,jsonify
-import joblib
+import requests
 import numpy as np
+from PIL import Image
+import io
 
-app =Flask(__name__)
+class Inference:
+    def __init__(self):
+        pass
+    
+    def predict(self,model_name, input, data_type):
+        if(data_type=='text'):
+            data=input
+        elif(data_type=='image'):
+            image_data = Image.open(input)  
+            image_byte_array = io.BytesIO()
+            image_data.save(image_byte_array, format='PNG')
+            data = image_byte_array.getvalue()
+        elif(data_type=='numpy_array'):
+            data=input.tolist()
+        
+        data_json={
+            'data':data,
+            'model':model_name,
+            'data_type':data_type
+        }
+        response = requests.post("http://localhost:3000/predict", json=data_json)
+        return response
 
-@app.route('/predict',methods=['POST'])
-def predict():
-    data=request.json
-    model_name=data['model_name']
-    user_name=data['user']
-    input=data['input']
-    try:
-        model_path=f'upload/{user_name}/{model_name}'
-        model=joblib.load(model_path)
-        prediction=model.predict(model)
-
-        return jsonify({'prediction':prediction})
-    except Exception as e:
-        return jsonify({'error':str(e)}),500
-
-if __name__=='__main__':
-    app.run(host="0.0.0.0",port=5000)
