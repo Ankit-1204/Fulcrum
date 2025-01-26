@@ -5,9 +5,9 @@ const path = require('path');
 const axios=require('axios')
 const authenticate =require('../middleware/auth');
 const Model=require('../model/file_model')
-const { execFile  } = require('child_process');
+const { execFile ,exec } = require('child_process');
 const { model } = require('mongoose');
-
+const util = require('util');
 const router=express.Router()
 
 async function runInference(model_name,data,data_type){
@@ -15,7 +15,8 @@ async function runInference(model_name,data,data_type){
     console.log(record)
     const envPath=path.resolve(record.venvPath,'Scripts','python')
     const scriptPath = record.script;
-    execFile(envPath, [scriptPath, JSON.stringify(data)], (err, stdout, stderr) => {
+    const dat={"text":data}
+    execFile(envPath, [scriptPath, dat], (err, stdout, stderr) => {
         if (err) {
             console.error('Error executing Python script:', err);
             return res.status(500).json({ error: 'Failed to process request' });
@@ -27,24 +28,33 @@ async function runInference(model_name,data,data_type){
         res.json({ result: stdout });
     })
 }
+const execPromise = util.promisify(exec);
 async function envSetup(recordId) {
-    const record=await Model.findOne({_id:recordId})
+    try {
+        const record=await Model.findOne({_id:recordId})
+    console.log(record)
     const venvPath = path.join( 'venvs', recordId.toString());
     const req_path = path.resolve(record.requirement);
-    console.log(req_path)
-    console.log('yooo')
-    exec(`python -m venv ${venvPath}`, (err) => {
-        if (err) return console.error('Error creating virtual environment:', err);
-        const pipInstall = `${path.join(venvPath, 'Scripts', 'pip')} install -r ${req_path}`;
-        exec(pipInstall, async (err) => {
-            if (err) return console.error('Error installing requirements:', err);
-            await Model.updateOne(
-                { _id: recordId },
-                { $set: { status: 'ready', venvPath } }
-            );
-            console.log('Environment setup complete');
-        });
-    })
+    console.log(venvPath)
+    await execPromise(`python -m venv ${venvPath}`);
+        console.log('Virtual environment created');
+
+        const pipPath = path.join(venvPath, 'Scripts', 'python'); 
+        await execPromise(`"${pipPath}" -m pip install --upgrade pip`);
+        console.log('Pip upgraded successfully');
+
+        await execPromise(`"${pipPath}" -m pip install -r "${req_path}"`);
+        console.log('Dependencies installed successfully');
+
+        await Model.updateOne(
+            { _id: recordId },
+            { $set: { status: 'ready', venvPath } }
+        );
+        console.log('Environment setup complete');
+    } catch (err) {
+        console.error('Error in environment setup:', err);
+    }
+    
 } 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -87,7 +97,6 @@ router.post('/upload',authenticate,uploads.fields([
             console.log('No file uploaded')
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        console.log(req.files['requirements'][0].path)
         const fileName = req.files['model'][0].path.split('\\').pop();
         const record = {
             userId: req.body.userId,
@@ -121,7 +130,8 @@ router.post('/predict',authenticate, async (req,res)=>{
         console.log(record)
         const envPath=path.resolve(record.venvPath,'Scripts','python')
         const scriptPath = record.script;
-        execFile(envPath, [scriptPath, JSON.stringify(data)], (err, stdout, stderr) => {
+        const dat={"data":data}
+        execFile(envPath, [scriptPath, JSON.stringify(dat)], (err, stdout, stderr) => {
             if (err) {
                 console.error('Error executing Python script:', err);
                 return res.status(500).json({ error: 'Failed to process request' });
